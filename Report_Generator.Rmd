@@ -1,0 +1,1247 @@
+---
+title: "Week 2 Discussion Report"
+output:
+  html_document: default
+  pdf_document: default
+fig_caption: yes
+header-includes:
+  - \usepackage{float}
+  - \usepackage{subfig}
+  - \usepackage{graphicx}
+---  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+    
+\begin{center}
+```{r,results='asis', echo=FALSE, comment=NA, fig.align='center'}
+cat(paste(name))
+```
+\end{center}  
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE, include=FALSE}
+# Load packages
+require(dplyr)
+require(lubridate)
+require(readr)
+require(igraph)
+require(kableExtra)
+require(tidyverse)
+require(tidytext)
+require(stringr)
+require(knitr)
+require(wordcloud)
+require(xtable)
+```
+    
+
+```{r,warning=FALSE, message=FALSE, echo=FALSE, include=FALSE}
+## THIS SECTION REQUIRES MANUAL INPUT ##
+
+# Roster
+# Note: names should match first name as it is written in data
+# If two people have the same first name, we will need to make some changes 
+roster <- c("Cindy", "Trevor", "Sarah", "Adrian", "Sabrina", "Taylor", 
+            "Natalie", "Sophie", "Liz", "Beth", "Ariana", "Christopher")
+
+# Facilitators need to be manually entered for each week below
+facilitators <- c("NA", "NA")
+
+# Key terms
+key_topics <- c("Welcome", "Introduction")
+# Next week's key terms
+next_key_topics <- c("Storytelling",
+                     "Organizational Strategy", 
+                     "Social Media",
+                     "Communication")
+
+# Assigned readings - key words  
+readings <- c(NA)
+
+# Fill in week number
+# Note that this is an index, not week of the semester
+# So, the first week of online discussion is "week 1" even if it is week 2 of the semester
+weeknum <- 1
+
+# Enter the student name for whom you want to create a report
+author <- name
+```
+    
+```{r,warning=FALSE, message=FALSE, echo=FALSE, include=FALSE}
+# Load data
+data <- read.csv(paste0("./Data/Test_Data_Wk",weeknum,".csv"), 
+                 row.names = 1, 
+                 stringsAsFactors = FALSE)
+
+# Re-save all date-times in the proper format
+data <- data %>%
+        mutate(created = as.POSIXct(created, format="%m/%d/%Y %H:%M")) 
+
+# Save all data from previous weeks in a list called alldata
+alldata <- as.list(1:weeknum)
+for(i in 1:weeknum){
+  alldata[[i]] <- read.csv(paste0("./Data/Test_Data_Wk",i,".csv"), 
+                           row.names = 1, 
+                           stringsAsFactors = FALSE)
+}
+
+nqs <- length(unique(data$question))
+```
+    
+# I. Participation  
+
+```{r, results='asis', echo=FALSE, comment=NA}
+# Change day 0 to day 7 (so sunday is coded as a 7)
+data$created_day[data$created_day==0] <- 7 
+
+# Save days of week
+days_of_week <- c("Monday", 
+                  "Tuesday", 
+                  "Wednesday", 
+                  "Thursday", 
+                  "Friday", 
+                  "Saturday", 
+                  "Sunday")
+
+# Save subsetted data for the student
+data_stud <- filter(data, post_author==author)
+
+# Save word counts
+WCs_stud <- data_stud$wordct
+WCs_all <- data$wordct  
+```
+
+<script type="text/javascript">
+function myFunction1() {
+  var x = document.getElementById("myDIV1");
+  if (x.style.display == "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+
+<script type="text/javascript">
+function myFunction2() {
+  var x = document.getElementById("myDIV2");
+  if (x.style.display == "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+
+### How much did the class post this week? 
+<button onclick="myFunction1()">What does it tell me?</button>
+<button onclick="myFunction2()">Why is it important?</button>
+<div id="myDIV1" style="display:none;">
+What does it mean: This graph shows the number of initial posts made in response to the facilitators’ questions, the number of replies to these posts, and the number of people who discussed each question. 
+</div>
+<div id="myDIV2" style="display:none;">
+Why is it important: In this class, you are required to post in response to each of the questions and respond to your classmates’ posts. Discussing multiple questions and ideas can expose yourself to diverse perspectives and deepen everyone’s exploration of course topics.  
+</div>
+```{r,warning=FALSE, message=FALSE, echo=FALSE, fig.align="center", fig.width=6, fig.height=3.5}
+# Set up data frame to collect class level values by question 
+# (number of participants and number of posts, also divided into original posts and replies)
+class_level <- data.frame(NumPart = rep(NA,(nqs+1)),
+                          NumPosts = rep(NA,(nqs+1)),
+                          NumOrig = rep(NA,(nqs+1)),
+                          NumReplies = rep(NA,(nqs+1)))
+
+rownames(class_level) <- c("Total", paste0("Question ", 1:nqs))
+
+# Go through each question and fill in the data frame
+
+qs <- as.list(as.vector(paste0("Q", 0:nqs)))
+qs[[1]] <- paste0("Q", 0:nqs)
+for(i in 1:(nqs+1)){
+  dat <- filter(data, question %in% qs[[i]])
+  class_level[i,"NumPart"] <- length(unique(dat$post_author))
+  class_level[i, "NumPosts"] <- nrow(dat)
+  class_level[i, "NumOrig"] <- sum(dat$type=="direct")
+  class_level[i, "NumReplies"] <- sum(dat$type=="reply")
+}
+
+# Create a box plot of the above information by question
+dat <- class_level[2:(nqs+1),] 
+dat$NumReplies[dat$NumReplies==0] <- NA
+maxy <- max(dat[,3]+dat[,4])
+bar <-  barplot(rbind(dat[,3],dat[,4]), 
+                  ylab="Number", 
+                  #xlab="Question", 
+                  #main="Class Activity", 
+                  col=c(5,7), 
+                  width=.1, 
+                  names.arg=paste0("Q", 1:nqs),
+                  cex.main=.9)
+  text(bar, dat[,3]-.2, dat[,3],cex=1)
+  text(bar, dat[,3]+dat[,4]-.2, dat[,4],cex=1)  
+  text(bar, rep(.2,4), paste(dat[,1],"ppl"),cex=1)
+  legend("topright", 
+         legend= c("Initial Posts","Replies"), 
+         fill =c(5,7), 
+         bty="n",
+         cex=1)    
+```
+   
+```{r results='asis', echo=FALSE, comment=NA}
+cat(paste("You made",
+      nrow(data_stud), 
+      "contributions to",
+      length(unique(data_stud$question)),
+      "of the 4 questions, including",
+      sum(data_stud$type=="direct"),
+      "direct responses to questions and",
+      sum(data_stud$type=="reply"),
+      "replies."), "\n")
+cat("\n")   
+```  
+
+<script type="text/javascript">
+function myFunction3() {
+  var x = document.getElementById("myDIV3");
+  if (x.style.display == "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+
+***Which question(s) generated the most discussion? Why might this be? How can this inform the questions you would ask when you facilitate?*** <button onclick="myFunction3()">More</button>
+
+<div id="myDIV3" style="display:none;">
+Which question(s) did you engage with most this week? Did you read and/or reply to others’ posts? What actions will you take next week to help you gain exposure to more diverse perspectives?
+</div>
+
+
+<hr style="border: dashed rgb(211,211,211) 1.0px;background-color: rgb(211,211,211);height: 1.0px;"/>
+ 
+ 
+<script type="text/javascript">
+function myFunction4() {
+  var x = document.getElementById("myDIV4");
+  if (x.style.display == "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+
+<script type="text/javascript">
+function myFunction5() {
+  var x = document.getElementById("myDIV5");
+  if (x.style.display == "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+
+
+### When did the class post this week?   
+<button onclick="myFunction4()">What does it tell me?</button>
+<button onclick="myFunction5()">Why is it important?</button>
+<div id="myDIV4" style="display:none;">
+This graph indicates when the post(s) the class and you made this week were contributed.
+</div>
+<div id="myDIV5" style="display:none;">
+Creating frequent and timely posts allows for an ongoing conversation. This can help deepen understanding of the topics and develop innovative ideas.
+</div>
+
+
+
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE, fig.align="center", fig.width=16, fig.height=4}
+# Save times that posts occured (by the author:post_times, and not by the author:post_times2)
+post_times <- data$created[data$post_author==author]
+post_times2 <- data$created[data$post_author!=author]
+
+# Save these times in data frames x and y so that all times have a corresponding "height" 
+# of 1 (note: this is just constructed to make the plot look nice)
+x <- data.frame(post_times,1) 
+y <- data.frame(post_times2,1)
+
+# Save the "end" time as the time of the last post, and then make the "start" time 7 days earlier
+end <-max(data$created)
+start <- end - 604800
+
+# Build the timeline plot
+  plot(y, ylab = '', 
+       xlab = '',
+       xlim=c(start, end),
+       type='n', yaxt='n',
+       #main="Timeline of Posts",
+       cex.axis=2,
+       cex.main=2)
+  points(y, 
+         pch = 20, 
+         ylab = '', 
+         xlab = '',
+         cex=2)
+  points(x, 
+         type = 'o', 
+         pch = '|', 
+         ylab = '', 
+         col=1, 
+         xlab = '', 
+         cex=2.5)
+  abline(h=1)
+  legend("topleft", 
+         legend= c("All posts","Your posts"),
+         pch = c(20, NA),
+         col =c(1,1),
+         pt.cex = c(2,2.5),
+         cex = 1.5,
+         bty="n")
+  legend("topleft", 
+         legend= c("All posts","Your posts"),
+         pch = c(NA, '|'),
+         col =c(1,1), 
+         pt.cex = c(2,2.5),
+         cex = 1.5,
+         bty="n")
+```
+  
+```{r results='asis', echo=FALSE, comment=NA}
+cat(paste0("The highest activity day was ",
+      days_of_week[as.numeric(names(table(data$created_day)))[which.max(table(data$created_day))]], 
+      ", with ",
+      round(max(table(data$created_day))/nrow(data)*100),
+      "% of all posts."), "\n")
+cat("\n")
+```   
+
+<script type="text/javascript">
+function myFunction6() {
+  var x = document.getElementById("myDIV6");
+  if (x.style.display == "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+
+ 
+***Did you make posts throughout the week or on specific days? How does this compare to what you did last week? What will you do differently next week?*** <button onclick="myFunction6()">More</button>
+<div id="myDIV6" style="display:none;">
+When did most overall posting activity occur? What should class members do to make sure the posts are distributed throughout the week? </div>
+
+<hr style="border: dashed rgb(211,211,211) 1.0px;background-color: rgb(211,211,211);height: 1.0px;"/>
+  
+<script type="text/javascript">
+function myFunction7() {
+  var x = document.getElementById("myDIV7");
+  if (x.style.display == "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+<script type="text/javascript">
+function myFunction8() {
+  var x = document.getElementById("myDIV8");
+  if (x.style.display == "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+
+### How long were the posts this week?
+<button onclick="myFunction7()">What does it tell me?</button>
+<button onclick="myFunction8()">Why is it important?</button>
+<div id="myDIV7" style="display:none;">
+The median indicates the midpoint of a set of values (e.g., length of your posts). 
+</div>
+<div id="myDIV8" style="display:none;">
+Very short posts (e.g., “I agree”) tend to be shallow in their presentation of ideas, while long posts can make your classmates overwhelmed.
+</div>
+
+&nbsp;
+
+```{r results='asis', echo=FALSE, comment=NA}
+
+cat(paste0("The median length of your posts was ",
+      median(WCs_stud),
+      " words (range: ",
+      min(WCs_stud), 
+      "-",
+      max(WCs_stud),
+      "). In comparison, median post length for the whole class was ",
+      median(WCs_all),
+      " words (range: ",
+      min(WCs_all), 
+      "-",
+      max(WCs_all),
+      ")"),"\n")
+cat("\n")  
+```
+
+<script type="text/javascript">
+function myFunction9() {
+  var x = document.getElementById("myDIV9");
+  if (x.style.display == "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+
+***Do you think you made the right length to posts to provide depth of insights and thoughtful ideas?*** <button onclick="myFunction9()">More</button>
+<div id="myDIV8" style="display:none;">
+How long the posts should be so others may not feel overwhelmed? What will you do next week? 
+</div>
+
+<hr style="border: dashed rgb(169,169,169) 1.0px;background-color: rgb(169,169,169);height: 3.0px;"/>
+
+  
+# II. Interaction  
+
+
+<script type="text/javascript">
+function myFunction10() {
+  var x = document.getElementById("myDIV10");
+  if (x.style.display == "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+
+<script type="text/javascript">
+function myFunction11() {
+  var x = document.getElementById("myDIV11");
+  if (x.style.display == "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+### How did you and your classmates interact with each other this week?      
+<button onclick="myFunction10()">What does it tell me?</button>
+<button onclick="myFunction11()">Why is it important?</button>
+<div id="myDIV10" style="display:none;">
+The graph shows how you are connected to the class in the discussion this week. 
+
+Each circle represents a class member, sized based on the number of replies made and received. 
+
+The straight lines show one-way interactions where one person replied to another, but did not receive a reply from that person. The curved lines show two-way interactions. Curved lines of similar thickness indicate reciprocity.
+
+A decentralized network is one in which interactions are distributed across class members. On the other hand, in a centralized network, interaction is concentrated on just a few key people.
+</div>
+
+<div id="myDIV11" style="display:none;">
+A meaningful discussion happens when everybody (not just some people) receive replies to their posts and when the class has back-and-forth exchanges of ideas.
+</div>
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE, fig.align="center", out.width = "500px"}
+# Create a new data frame called sna which only includes relevant columns for the sna
+sna <- data %>% dplyr::select(question, post_id, post_author, parent_post_id, parent_author, type) %>%
+       mutate(post_author = as.factor(post_author),
+       parent_author = as.factor(parent_author))
+
+# Remove all of the direct responses to questions 
+sna <- sna[sna$type!="direct",]
+    
+# Count number of times each student interacted to create overall edge list
+edges <- sna %>% count(post_author, parent_author) %>%
+         rename(weight = n)
+  
+# Get rid of self-replies 
+edges <- edges[as.character(edges$post_author)!=as.character(edges$parent_author),]
+  
+# Not sure why this was necessary, but it was for week 5 of the practice data
+edges <- na.omit(edges)
+  
+# Create vertex data frame based on all nodes in the edge list
+vertex <- as.data.frame(unique(data$post_author))
+names(vertex) <-"id"
+  
+# Build overall network
+allnetwork <- graph.data.frame(edges, directed=FALSE, vertices=vertex)
+allnetwork_directed <- graph.data.frame(edges, directed=TRUE, vertices=vertex) 
+vertex$alldegree<-degree(allnetwork)
+  
+# Color facilitators dark green, everyone else light green
+V(allnetwork)$color <- "light green"
+if(facilitators[1] %in% vertex$id){
+  V(allnetwork)[facilitators[1]]$color <- "dark green" 
+}
+if(facilitators[2] %in% vertex$id){
+  V(allnetwork)[facilitators[2]]$color <- "dark green" 
+}
+  
+# Plot network
+set.seed(300)
+index <- which(vertex$id==author)
+plot(allnetwork, 
+     layout=layout_in_circle,
+     vertex.size=2*(vertex$alldegree+3), 
+     edge.width=2*edges$weight, 
+     main="", 
+     vertex.label=c(rep("", index-1), "YOU", rep("",length(vertex$id)-index)))  
+     legend("right",c("Facilitator", "Participant"), pch=16, col = c("dark green", "light green"), bty="n")
+     legend("right",c("Facilitator", "Participant"), pch=1, bty="n")
+     
+cat("\n")
+  
+```
+    
+```{r, warning=FALSE, message=FALSE, results='asis', echo=FALSE, comment=NA}
+# Calculate centralization and reciprocity 
+cent <- centralization.degree (allnetwork, mode = "total", loops = FALSE, normalized = TRUE)$centralization
+recip <- reciprocity(allnetwork_directed, ignore.loops = TRUE, mode = "ratio")
+
+# Print summary of centralization
+# Note: this cut-off is somewhat arbitrary
+if(cent<.7){
+  cat("This week's social network was relatively decentralized, with many connections between different people. \n")
+} else if(cent>=.7){
+  cat("This week's social network was relatively centralized, with many connections to a small group of people. \n")
+}
+cat("\n")
+cat(paste0(round(recip*100), 
+           "% of connections were reciprocal (involved back and forth replies)."),"\n")
+```
+
+<script type="text/javascript">
+function myFunction12() {
+  var x = document.getElementById("myDIV12");
+  if (x.style.display == "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+
+***In the class network, is there anyone who did not have the opportunity to interact with other students? What can you and other class members do to make sure everyone is engaged in the discussion?***<button onclick="myFunction12()">More</button>
+<div id="myDIV12" style="display:none;">
+Are your interactions mostly two-way or one way? Why might this be? How would next week’s interactions be?</div>
+
+<hr style="border: dashed rgb(211,211,211) 1.0px;background-color: rgb(211,211,211);height: 1.0px;"/>
+
+
+<script type="text/javascript">
+function myFunction13() {
+  var x = document.getElementById("myDIV13");
+  if (x.style.display == "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+
+<script type="text/javascript">
+function myFunction14() {
+  var x = document.getElementById("myDIV14");
+  if (x.style.display == "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+
+### Who have you interacted with?
+<button onclick="myFunction13()">What does it tell me?</button>
+<button onclick="myFunction14()">Why is it important?</button>
+<div id="myDIV13" style="display:none;">
+The tables show the number of replies you received and sent to others in the class both this week and since the course started.</div>
+
+<div id="myDIV14" style="display:none;">
+Interacting with different people lets you gain more diverse perspectives on issues.</div>
+
+&nbsp;
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE, fig.pos = "H"}
+# Create a list, with edge lists for every week to date
+alledges <- as.list(1:weeknum)
+for(i in 1:weeknum){
+  sna <- alldata[[i]] %>% dplyr::select(question, post_id, post_author, parent_post_id, parent_author, type) %>%
+         mutate(post_author = as.factor(post_author),
+         parent_author = as.factor(parent_author))
+  sna <- sna[sna$type!="direct",]
+  alledges[[i]] <- sna %>% count(post_author, parent_author) %>%
+                   rename(weight = n)
+  alledges[[i]] <- alledges[[i]][as.character(alledges[[i]]$post_author)!=as.character(alledges[[i]]$parent_author),]
+  alledges[[i]] <- na.omit(alledges[[i]])
+}
+
+# Use edge lists to create a summary of all edges by:
+  #1) Creating a unique identifier, "connect" for each connection and 
+alledges2 <- alledges
+for(i in 1:weeknum){
+  alledges2[[i]]$connect <- paste0(alledges2[[i]]$post_author,"-",alledges2[[i]]$parent_author)
+  alledges2[[i]] <- alledges2[[i]][,c("connect", "weight")]
+}
+
+ #2) Joining all of the edgelists together by "connect", then
+edge_summ <- alledges2[[1]]
+
+if (weeknum>1){
+  for(i in 2:weeknum){
+  edge_summ <- full_join(edge_summ, alledges2[[i]], by="connect")
+  }
+}
+  
+  #3) Summing the number of connections accross the rows
+edge_summ$total <- rowSums(edge_summ[,2:ncol(edge_summ)], na.rm=TRUE)
+edge_summ <- edge_summ[,c("connect","total")]
+
+# The following code is just to split the "connect" column back into post and parent authors
+colnames(edge_summ) <- c("connection", "Number of Times")
+resplit <- strsplit(edge_summ$connection, "-")
+edge_summ$post_author <- NA
+edge_summ$parent_author <- NA
+for(i in 1:nrow(edge_summ)){
+  edge_summ$post_author[i] <- resplit[[i]][1]
+  edge_summ$parent_author[i] <- resplit[[i]][2]
+}
+edge_summ <- edge_summ[,c("post_author", "parent_author", "Number of Times")]
+
+# Create "replied to you" table
+i=weeknum
+reptoyou <- edge_summ[edge_summ$parent_author==author,]
+reptoyou <- reptoyou[,c(1,3)]
+colnames(reptoyou) <- c("Name", "Overall")
+  
+reptoyou2 <- alledges[[i]][alledges[[i]]$parent_author==author,]
+reptoyou2 <- reptoyou2[,c(1,3)]
+colnames(reptoyou2) <- c("Name", "This Week")
+  
+reptoyou <- dplyr::left_join(reptoyou, reptoyou2, by="Name")
+reptoyou$'This Week'[is.na(reptoyou$'This Week')] <- 0
+reptoyou <- reptoyou[order(reptoyou$Name),c(1,3,2)]
+colnames(reptoyou)[1] <- "THEM -> YOU"
+
+# Create "you replied to" table
+yourepto <- edge_summ[edge_summ$post_author==author,]
+yourepto <- yourepto[,c(2,3)]
+colnames(yourepto) <- c("Name", "Overall")
+  
+yourepto2 <- alledges[[i]][alledges[[i]]$post_author==author,]
+yourepto2 <- yourepto2[,c(2,3)]
+colnames(yourepto2) <- c("Name", "This Week")
+  
+yourepto <- dplyr::left_join(yourepto, yourepto2, by="Name")
+yourepto$'This Week'[is.na(yourepto$'This Week')] <- 0
+yourepto <- yourepto[order(yourepto$Name),c(1,3,2)]
+colnames(yourepto)[1] <- "YOU -> THEM"
+```
+    
+<div class="row">
+<div class="col-md-6"> 
+```{r, echo=FALSE, results='asis'}
+if(nrow(reptoyou)>0){
+  knitr::kable(reptoyou, format = "html") %>%
+  kable_styling(bootstrap_options = c("striped", "bordered"), full_width = F) %>%
+  column_spec(1:3, width = "5cm")
+}
+```
+  
+</div>
+<div class="col-md-6"> 
+```{r, echo=FALSE, results='asis'}
+if(nrow(yourepto)>0){
+  knitr::kable(yourepto, format = "html") %>%
+  kable_styling(bootstrap_options = c("striped", "bordered"), full_width = F) %>%
+  column_spec(1:3, width = "5cm")
+}
+```
+</div> 
+</div>
+<script type="text/javascript">
+function myFunction15() {
+  var x = document.getElementById("myDIV15");
+  if (x.style.display == "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+
+***Who have you not interacted with much? What will you do to reach out to those people?***<button onclick="myFunction15()">More</button>
+<div id="myDIV15" style="display:none;">
+Which different people in the class did you interact with this week? Who have you interacted the most with overall?</div>
+
+<hr style="border: dashed rgb(211,211,211) 1.0px;background-color: rgb(211,211,211);height: 1.0px;"/>
+
+  
+<script type="text/javascript">
+function myFunction16() {
+  var x = document.getElementById("myDIV16");
+  if (x.style.display == "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+
+<script type="text/javascript">
+function myFunction17() {
+  var x = document.getElementById("myDIV17");
+  if (x.style.display == "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+  
+### Did you agree with your peers?
+<button onclick="myFunction16()">What does it tell me?</button>
+<button onclick="myFunction17()">Why is it important?</button>
+
+<div id="myDIV16" style="display:none;">
+A post is identified as showing agreement if it has at least one agreement word (e.g. absolutely, indeed). This is estimated through a text analysis software called LIWC2015 by calculating the number of words in the post that match a list of words related to agreement (e.g. absolutely, indeed).</div>
+
+<div id="myDIV17" style="display:none;">
+Try to go beyond simple expressions of agreement or disagreement to say why you
+support with their position. Don’t be afraid to disagree (respectfully), this is where some of the most interesting discussion comes from!</div>
+
+&nbsp;
+
+```{r, results='asis', echo=FALSE, comment=NA}
+# Calculate the number of student posts and class posts with at least 1 assent word
+assent_stud <- data_stud$assent
+num_assent <- sum(assent_stud>0)
+assent_all <- data$assent
+num_assent_all <- sum(assent_all>0)
+
+# Set up so that the sentence makes sense if the student had 0 or 1 posts showing assent
+case <- "were"
+if(num_assent==1){
+  case <- "was"
+}
+extraline <- ""
+
+if(num_assent>0){
+assent_index <- which(assent_stud>0)[1]
+text <- data_stud$post_text[assent_index]
+text <- paste(strsplit(text," ")[[1]][1:10], collapse=" ")
+extraline <- paste('For example, your post that began: "', text, '...".')
+}
+
+# Print sentence
+cat(paste(num_assent, "of your", nrow(data_stud), "posts", case, 
+          "identified as showing agreement with your peers.",
+          extraline,
+          "In comparison,",
+          num_assent_all, "of the class's", nrow(data), 
+          "posts were identified as showing agreement with peers."), "\n")
+cat("\n")
+```
+&nbsp;
+
+<script type="text/javascript">
+function myFunction18() {
+  var x = document.getElementById("myDIV15");
+  if (x.style.display == "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+
+***Did most of your posts tend to show agreement with your peers? When you agreed with your peers, did you elaborate on your points of view by providing further explanation?***<button onclick="myFunction18()">More</button>
+
+<div id="myDIV18" style="display:none;">
+What action you will take next week to contribute meaningfully to the class discussion?
+</div>
+
+<hr style="border: dashed rgb(211,211,211) 1.0px;background-color: rgb(211,211,211);height: 1.0px;"/>
+
+
+<script type="text/javascript">
+function myFunction19() {
+  var x = document.getElementById("myDIV19");
+  if (x.style.display == "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+
+<script type="text/javascript">
+function myFunction20() {
+  var x = document.getElementById("myDIV20");
+  if (x.style.display == "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+
+### Did you ask questions?
+<button onclick="myFunction19()">What does it tell me?</button>
+<button onclick="myFunction20()">Why is it important?</button>
+
+<div id="myDIV19" style="display:none;">
+A post is identified as questioning if it contained sentences that ended in “?”. 
+</div>
+
+<div id="myDIV20" style="display:none;">
+Asking questions on the topics can prompt classmates to reflect deeply on the contents and elicit ideas.
+</div>
+       
+&nbsp;
+
+```{r, results='asis', echo=FALSE, comment=NA, warning=FALSE}
+# Calculate the number of question marks among the student's posts and all posts
+numqs <- sum(grepl("\\?", data_stud$post_text))
+numqs_all <- sum(grepl("\\?", data$post_text))
+
+# Print sentence
+cat(paste("Among all of your posts, you asked", numqs, "questions of your peers. In total,",
+          numqs_all, "questions were asked by you and your classmates in the discussion this week."), "\n")
+cat("\n")
+```   
+&nbsp;
+
+<script type="text/javascript">
+function myFunction21() {
+  var x = document.getElementById("myDIV21");
+  if (x.style.display == "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+    
+***Did you ask insightful questions in your post? How did the questions help you reflect on the ideas?***<button onclick="myFunction21()">More</button>
+
+<div id="myDIV21" style="display:none;">
+Do you think the whole class asked enough questions to elicit more new ideas from each other? What should class members do to ask thoughtful questions next week?
+</div>
+   
+<hr style="border: dashed rgb(211,211,211) 1.0px;background-color: rgb(211,211,211);height: 1.0px;"/>
+    
+<script type="text/javascript">
+function myFunction23() {
+  var x = document.getElementById("myDIV23");
+  if (x.style.display == "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+    
+### Which of your posts this week was the most engaging?
+<button onclick="myFunction23()">Why is it important?</button>
+<div id="myDIV23" style="display:none;">
+Engaging posts play a critical role in creating interactive discussions. Clear posts with unique perspectives help the class to generate new insights and foster understanding of topics.
+</div>
+
+&nbsp;
+
+```{r, results='asis', echo=FALSE, comment=NA}
+# Identify best post and attributes
+best_index <- which.max(data_stud$num_readers)
+best_ID <- data_stud$post_id[best_index]
+sub <- filter(data, parent_post_id==best_ID)
+quest <- data_stud$question[best_index]
+quest <- strsplit(quest, split="")[[1]][2]
+text <- data_stud$post_text[best_index]
+text <- paste(strsplit(text," ")[[1]][1:10], collapse=" ")
+
+# Print results
+cat(paste("Your most-viewed post this week was in response to Question", quest, ". This post got", data_stud$num_readers[best_index], "views and received", nrow(sub), "replies.", "\n"))
+cat("\n")
+cat(paste0('The post began with:"', text,'..."', "\n"))
+cat("\n")
+
+```
+
+&nbsp;
+
+<script type="text/javascript">
+function myFunction24() {
+  var x = document.getElementById("myDIV24");
+  if (x.style.display == "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+
+***Which post of yours had the most views and replies this week? What do you think made this post the most engaging?***<button onclick="myFunction24()">More</button>
+<div id="myDIV24" style="display:none;">
+What can you do to make future posts engaging?
+</div>
+  
+  
+<hr style="border: dashed rgb(169,169,169) 1.0px;background-color: rgb(169,169,169);height: 1.0px;"/>
+
+ 
+# III. Thoughtful Ideas  
+### What were this week's key topics?
+     
+```{r, results='asis', echo=FALSE, comment=NA}
+# Print the key_topics provided by prof. Axelrod
+cat(key_topics, sep=", ")
+cat("\n")
+```  
+<script type="text/javascript">
+function myFunction25() {
+  var x = document.getElementById("myDIV25");
+  if (x.style.display == "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+
+<script type="text/javascript">
+function myFunction26() {
+  var x = document.getElementById("myDIV26");
+  if (x.style.display == "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+
+### What phrases were most commonly used in this week's discussion?    
+<button onclick="myFunction25()">What does it tell me?</button>
+<button onclick="myFunction26()">Why is it important?</button>
+
+<div id="myDIV25" style="display:none;">
+The word cloud shows the most common phases in this week’s discussion with more frequently used phrases appearing larger. 
+</div>
+<div id="myDIV26" style="display:none;">
+The class needs to take responsibility for fully addressing weekly topics. It can be achieved by aligning the discussion contents with the topics.
+</div>
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE, fig.align="center", fig.asp=.5}
+data("stop_words")
+
+# Save text in a data frame  
+text <- data$post_text
+text_df <- tibble(line = data$post_id, text = text)
+    
+# Find bigrams
+bigrams_df <- text_df %>%
+              unnest_tokens(bigram, text, token = "ngrams", n = 2) %>%
+              tidyr::separate(bigram, c("word1", "word2"), sep = " ") %>%
+              filter(
+              !word1 %in% c(stop_words$word, "amp", "quot", "pg"), # remove stopwords 
+              !word2 %in% c(stop_words$word, "amp", "quot", "pg"),
+              !str_detect(word1, pattern = "[[:digit:]]"), # removes any words with numeric digits
+              !str_detect(word2, pattern = "[[:digit:]]"),
+              !str_detect(word1, pattern = "[[:punct:]]"), # removes any remaining punctuations
+              !str_detect(word2, pattern = "[[:punct:]]"),
+              !str_detect(word1, pattern = "(.)\\1{2,}"),  # removes words with >=3 repeated letters
+              !str_detect(word2, pattern = "(.)\\1{2,}"),
+              !str_detect(word1, pattern = "\\b(.)\\b"),   # removes remaining single letter words
+              !str_detect(word2, pattern = "\\b(.)\\b")
+              ) %>%
+              tidyr::unite("bigram", c(word1, word2), sep = " ") %>%
+              count(bigram, sort=TRUE)
+
+# Restrict to the first 70 bigrams    
+bigrams_df <- bigrams_df[1:70,]
+
+# For those bigrams, look for and combine simple plurals (i.e., just an s on the end)
+for(i in 1:70){
+  bgs <- paste0(bigrams_df$bigram[i], "s")
+  bgs_exist <- sum(bigrams_df$bigram==bgs)
+  if(bgs_exist != 0){
+    bgs_index <- which(bigrams_df$bigram==bgs)
+    bg_index <- which(bigrams_df$bigram==bigrams_df$bigram[i])
+    bigrams_df[bg_index,"n"] <- bigrams_df[bg_index,"n"] + bigrams_df[bgs_index,"n"]
+    bigrams_df <- bigrams_df[-bgs_index,]
+  }
+}
+bigrams_df <- bigrams_df[order(bigrams_df$n, decreasing = TRUE),]
+
+# Make word cloud
+# Note: might need to change set.seed to get it to look nice
+set.seed(123)
+pal <- brewer.pal(8, "Dark2")
+require(RColorBrewer)
+wordcloud(bigrams_df$bigram, 
+          bigrams_df$n, 
+          scale=c(3,.5),
+          min.freq=2, 
+          random.order=FALSE,
+          colors=pal,
+          random.color = TRUE)
+```
+<script type="text/javascript">
+function myFunction27() {
+  var x = document.getElementById("myDIV27");
+  if (x.style.display == "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+    
+***What phrases were used the most? How do these match the key topics given by your instructor? Are there any key topics that were not discussed much?***<button onclick="myFunction27()">More</button>
+<div id="myDIV27" style="display:none;">
+How will you aim to talk about all the key topics next week? (Key topics for next week are: Storytelling, Organizational Strategy, Social Media, Communication)
+</div>
+
+ <hr style="border: dashed rgb(211,211,211) 1.0px;background-color: rgb(211,211,211);height: 1.0px;"/>
+    
+<script type="text/javascript">
+function myFunction28() {
+  var x = document.getElementById("myDIV28");
+  if (x.style.display == "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+
+<script type="text/javascript">
+function myFunction29() {
+  var x = document.getElementById("myDIV29");
+  if (x.style.display == "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+
+### Did you reference the assigned materials?
+<button onclick="myFunction28()">What does it tell me?</button>
+<button onclick="myFunction29()">Why is it important?</button>
+
+<div id="myDIV28" style="display:none;">
+A post is identified as referencing the materials if it mentioned authors’ names of the materials assigned to this week.  
+</div>
+
+<div id="myDIV29" style="display:none;">
+Try to back up your ideas with references to the assigned readings. It can help you to identify the current status of your understanding and provide support for your claims.
+</div>
+
+&nbsp;  
+
+```{r, results='asis', echo=FALSE, comment=NA, message=FALSE, warning=FALSE}
+# Save all words that were used in a vector
+allwords <- unlist(strsplit(data$post_text, split=" "))
+
+# Count up the number of matches to each of the author names in the readings list
+# Note that it will count even if not an exact match, which may or may not be accurate
+all_refs <- 0
+for(j in 1:length(readings)){
+      all_refs <- all_refs + sum(str_detect(allwords, regex(readings[j], ignore_case=TRUE)))
+}
+
+# Do the same for the student's posts
+studwords <- unlist(strsplit(data_stud$post_text, split=" "))
+stud_refs <- 0
+for(j in 1:length(readings)){
+      stud_refs <- stud_refs + sum(str_detect(studwords, regex(readings[j], ignore_case=TRUE)))
+}
+
+# Print sentence
+cat(paste("Among all of your posts, you made", stud_refs, 
+          "reference(s) to the assigned readings. In total you and your classmates made", 
+          all_refs, "references to assigned readings this week."), "\n")
+cat("\n")
+```   
+
+<script type="text/javascript">
+function myFunction30() {
+  var x = document.getElementById("myDIV30");
+  if (x.style.display == "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+ 
+***Did you read and reference the materials assigned to this week? If so, did you reflect on the connections between the assigned materials and weekly topics?***<button onclick="myFunction30()">More</button>
+<div id="myDIV30" style="display:none;">
+What can you do next week to elicit and reference the ideas that you learned from the materials?
+</div>
+ 
+<hr style="border: dashed rgb(211,211,211) 1.0px;background-color: rgb(211,211,211);height: 1.0px;"/>
+  
+<script type="text/javascript">
+function myFunction31() {
+  var x = document.getElementById("myDIV31");
+  if (x.style.display == "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+
+<script type="text/javascript">
+function myFunction32() {
+  var x = document.getElementById("myDIV32");
+  if (x.style.display == "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+
+### How often did you share your thoughts and perspectives?
+<button onclick="myFunction31()">What does it tell me?</button>
+<button onclick="myFunction32()">Why is it important?</button>
+
+<div id="myDIV31" style="display:none;">
+This plot shows how your posts compared to the class as a whole in terms of idea-sharing words. Similar to Agreement, a post is identified as showing idea sharing if it has at least one related word (e.g. think, consider). This metric is estimated using LIWC software by calculating the number of idea-sharing word occurrences.
+</div>
+
+<div id="myDIV32" style="display:none;">
+Express your ideas with perspectives or thoughts when you post. This can help enrich the class discussion.
+</div>
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE, fig.align="center", fig.width=4, fig.height=3}
+# Save % of insight words per post
+Insight_stud <- (data_stud$insight/100)*data_stud$wordct
+Insight_all <- (data$insight/100)*data$wordct
+
+# Create initial plot
+plot <- boxplot(Insight_all, Insight_stud, 
+        plot=FALSE)
+
+# Change plot so that the boxes extend for the entire range
+plot$stats[4,1] <- plot$stats[5,1] <- max(Insight_all)
+plot$stats[2,1] <- plot$stats[1,1] <- min(Insight_all)
+plot$stats[4,2] <- plot$stats[5,2] <- max(Insight_stud)
+plot$stats[2,2] <- plot$stats[1,2] <- min(Insight_stud)
+
+# Update group names
+plot$names <- c("Class","You")
+
+# Plot the boxes (range with a line at the median)
+bxp(plot,
+    outline=F, 
+    las = 2,
+    main="Idea Sharing Words (per post)",
+    horizontal = TRUE,
+    show.names=TRUE,
+    boxfill=c("light blue","blue"))
+```
+<script type="text/javascript">
+function myFunction33() {
+  var x = document.getElementById("myDIV33");
+  if (x.style.display == "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+
+***Did your posts share ideas and perspectives about the questions and materials? How does it compare to the class as a whole? What does it mean to you?***<button onclick="myFunction33()">More</button>
+<div id="myDIV33" style="display:none;">
+What will you do next week to share more ideas in your posts? 
+</div>
+
+<hr style="border: dashed rgb(211,211,211) 1.0px;background-color: rgb(211,211,211);height: 1.0px;"/>
+
+    
+<script type="text/javascript">
+function myFunction34() {
+  var x = document.getElementById("myDIV34");
+  if (x.style.display == "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+
+<script type="text/javascript">
+function myFunction35() {
+  var x = document.getElementById("myDIV35");
+  if (x.style.display == "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+  
+### How often did you give supporting evidence for your ideas?
+<button onclick="myFunction34()">What does it tell me?</button>
+<button onclick="myFunction35()">Why is it important?</button>
+
+<div id="myDIV34" style="display:none;">
+This plot also shows how your posts compared to the class as a whole in terms of giving-reason words. Similar to Agreement and Idea sharing, a post is identified as showing reasons if it has at least one related word (e.g. because, therefore). This metric is also estimated using LIWC software by calculating the percentage of the number of giving-reason word occurrence.
+</div>
+
+<div id="myDIV35" style="display:none;">
+Think about the reasons (and the consequences) of the ideas you want to share in your posts. This can help you create more thoughtful posts for the class discussion. 
+</div>
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE, fig.align="center", fig.width=4, fig.height=3}
+# Save % of insight words per post
+Cause_stud <- (data_stud$cause/100)*data_stud$wordct
+Cause_all <- (data$cause/100)*data$cause
+
+# Create initial plot
+plot <- boxplot(Cause_all, Cause_stud, plot=FALSE) 
+
+# Change plot so that the boxes extend for the entire range
+plot$stats[4,1] <- plot$stats[5,1] <- max(Cause_all)
+plot$stats[2,1] <- plot$stats[1,1] <- min(Cause_all)
+plot$stats[4,2] <- plot$stats[5,2] <- max(Cause_stud)
+plot$stats[2,2] <- plot$stats[1,2] <- min(Cause_stud)
+
+# Update group names
+plot$names <- c("Class","You")
+
+# Plot the boxes (range with a line at the median)
+bxp(plot,
+    outline=F, 
+    las = 2,
+    main="Giving Reasons Words (per post)",
+    horizontal = TRUE,
+    show.names=TRUE,
+    boxfill=c("light blue","blue"))
+```
+<script type="text/javascript">
+function myFunction36() {
+  var x = document.getElementById("myDIV36");
+  if (x.style.display == "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+    
+***Did you give reasons for the ideas your shared in your posts? How does it compare to the class as a whole? What does it mean to you?***<button onclick="myFunction36()">More</button>
+<div id="myDIV36" style="display:none;">
+How can you use reasons to create more thoughtful posts next week? 
+</div>
+
+<hr style="border: dashed rgb(169,169,169) 1.0px;background-color: rgb(169,169,169);height: 3.0px;"/>
+  

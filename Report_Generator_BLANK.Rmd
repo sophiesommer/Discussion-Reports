@@ -1,0 +1,24 @@
+---
+title: "Week 2 Discussion Report"
+output:
+  pdf_document: default
+  html_document: default
+fig_caption: yes
+header-includes:
+  - \usepackage{float}
+  - \usepackage{subfig}
+  - \usepackage{graphicx}
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+    
+\begin{center}
+```{r,results='asis', echo=FALSE, comment=NA, fig.align='center'}
+cat(paste(name))
+```
+\end{center}  
+
+# This report is blank because you did not participate in the online discussion this week.
