@@ -13,7 +13,8 @@ topics <- read.csv(paste0("./Data/rawdata-topics.csv"), stringsAsFactors=FALSE)
 
 # Roster
 # Note: names should match first name as it is written in data/NYU Classes
-# If two people have the same first name, we will need to make some changes in the future to account for this
+# If two people have the same first name, 
+# we will need to make some changes in the future to account for this
 roster <- c("Cindy", "Trevor", "Sarah", "Adrian", "Sabrina", "Taylor", 
             "Natalie", "Sophie", "Liz", "Beth", "Ariana", "Christopher")
 
@@ -22,11 +23,14 @@ facilitators <- list(c(NA, NA))
 
 # Fill in week number
 # Note that this is an index, not week of the semester
-# So, the first week of online discussion is "week 1" even if it is week 2 of the semester
+# So, the first week of online discussion is "week 1" 
+# even if it is week 2 of the semester
 weeknum <- i <- 1
 
-# The for-loop below can be used to repeat this process for all weeks up to the week of interest
-# If all these datasets have already been saved, you can set i=weeknum and only run code inside loop
+# The for-loop below can be used to repeat this process 
+# for all weeks up to the week of interest
+# If all these datasets have already been saved, 
+# you can set i=weeknum and only run code inside loop
 for(i in 1:weeknum){
         # Determine the topic ID for the given week number
         # Note: this should be checked and can be entered manually if necessary
@@ -43,13 +47,8 @@ for(i in 1:weeknum){
         colnames(data) <- tolower(colnames(data))
         
         # Create new column called created_day: day of the week that a post was made
-        data$created_day <- as.POSIXlt(data$created, format="%m/%d/%Y %H:%M")$wday
-        
-        # Convert all of the date/time stamps to readable format
-        # data <- data %>%
-        #         mutate(created = as.POSIXct(created, format="%m/%d/%Y %H:%M")) %>%
-        #         mutate(modified= as.POSIXct(modified, format="%m/%d/%Y %H:%M")) %>%
-        #         mutate(lastthreadate = as.POSIXct(lastthreadate, format="%m/%d/%Y %H:%M"))
+        data$created_day <- as.POSIXlt(data$created, 
+                                       format="%m/%d/%Y %H:%M")$wday
         
         # Keep only the first name of authors
         data$author <- sub(" .*", "", data$author)
@@ -108,7 +107,8 @@ for(i in 1:weeknum){
         
         
         # Create new column (type) which differentiates initial posts and replies
-        # Questions/welcome messages are coded as "parent", initial repsponses are coded as "direct", replies as "reply"
+        # Questions/welcome messages are coded as "parent", initial repsponses are
+        # coded as "direct", replies as "reply"
         data$type <- NA
         firstlevel <- data$parent_post_id %in% questions
         data$type <- "reply"
@@ -132,4 +132,5 @@ for(i in 1:weeknum){
         write.csv(data, file=paste0("./Data/Test_Data_Wk",i,".csv"))
 }
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-##RUN THE MOST RECENT WEEK'S DATA THROUGH LIWC AND RESAVE FILE TO SAME DIRECTORY with _LIWC ADDED TO FILE NAME, THEN OPEN STEP 2##
+##RUN THE MOST RECENT WEEK'S DATA THROUGH LIWC AND RESAVE FILE TO SAME DIRECTORY 
+##with _LIWC ADDED TO FILE NAME, THEN OPEN STEP 2
