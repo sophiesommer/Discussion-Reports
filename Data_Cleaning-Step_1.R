@@ -35,7 +35,9 @@ for(i in 1:weeknum){
         # Determine the topic ID for the given week number
         # Note: this should be checked and can be entered manually if necessary
         topicIDs <- topics$ID[grep(paste("Week", i), topics$TITLE)]
-        weekID <- "12643205"
+        
+        # Enter week ID directly here:
+        weekID <- "32132132"
         
         #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         ## INITIAL DATA CLEANING ##
